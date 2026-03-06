@@ -19,12 +19,12 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 40px 20px;
+      padding: 20px 20px;
     }
 
     header {
       text-align: center;
-      margin-bottom: 48px;
+      margin-bottom: 16px;
     }
 
     h1 {
@@ -144,8 +144,6 @@
 
     .map-grid {
       display: grid;
-      grid-template-columns: repeat(9, 80px);
-      grid-template-rows: repeat(9, 80px);
       border: 1px solid #3a3010;
       gap: 0;
     }
@@ -159,24 +157,135 @@
       overflow: hidden;
     }
 
-    .map-tile img {
+    .map-tile img:not(.char-marker) {
       width: 100%;
       height: 100%;
       display: block;
       image-rendering: pixelated;
     }
 
-    .map-tile.char-pos::after {
-      content: '';
+    .map-tile {
+      cursor: pointer;
+    }
+
+    .char-marker {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #f0d060;
-      border: 1px solid #fff;
+      width: 39%;
+      height: 39%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      object-fit: contain;
+      image-rendering: pixelated;
+      cursor: pointer;
+    }
+
+    #char-popover {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      background: #1a1a1a;
+      border: 1px solid #f0a020;
+      border-radius: 6px;
+      padding: 14px 18px;
+      box-shadow: 0 0 16px #f0a02044;
       pointer-events: none;
+      min-width: 200px;
+    }
+
+    #char-popover .cp-name {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #f0d060;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    #char-popover .cp-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.7rem;
+      color: #a08040;
+      margin-bottom: 3px;
+    }
+
+    #char-popover .cp-row span:last-child {
+      color: #e0c97f;
+      text-align: right;
+    }
+
+    #char-popover .cp-divider {
+      border: none;
+      border-top: 1px solid #3a3010;
+      margin: 8px 0;
+    }
+
+    #tile-popover {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      background: #1a1a1a;
+      border: 1px solid #f0a020;
+      border-radius: 6px;
+      padding: 10px 14px;
+      box-shadow: 0 0 16px #f0a02044;
+      pointer-events: none;
+    }
+
+    #tile-popover .pop-name {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #f0d060;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .char-sprite-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 8px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      transition: border-color 0.15s;
+    }
+
+    .char-sprite-item:hover {
+      border-color: #3a3010;
+    }
+
+    .char-sprite-item.active {
+      border-color: #f0a020;
+      box-shadow: 0 0 8px #f0a02044;
+    }
+
+    .char-sprite-item img {
+      width: 64px;
+      height: 64px;
+      image-rendering: pixelated;
+      object-fit: contain;
+    }
+
+    .char-sprite-name {
+      font-size: 0.65rem;
+      color: #f0d060;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .map-tile.char-highlighted {
+      outline: 3px solid #f0d060;
+      outline-offset: -3px;
+      z-index: 1;
+    }
+
+    #tile-popover .pop-coords {
+      font-size: 0.7rem;
+      color: #a08040;
     }
   </style>
 </head>
@@ -184,54 +293,25 @@
 
   <header>
     <h1>Artifacts</h1>
-    <p class="tagline">The MMO Simulator</p>
   </header>
 
-  <div class="status-bar">
-    <div class="stat">
-      <div class="stat-label">Server</div>
-      <div class="stat-value online" th:text="${serverStatus}">ONLINE</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Adventurers Online</div>
-      <div class="stat-value" th:text="${playersOnline}">0</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Monsters Slain</div>
-      <div class="stat-value" th:text="${monstersSlain}">0</div>
-    </div>
-  </div>
 
-  <div class="cards">
-    <div class="card">
-      <div class="card-icon">⚔️</div>
-      <h2>Combat</h2>
-      <p>Battle fearsome creatures across procedurally generated dungeons. Coming soon.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🗺️</div>
-      <h2>Exploration</h2>
-      <p>Discover uncharted lands, hidden ruins, and ancient secrets. Coming soon.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🧙</div>
-      <h2>AI Companions</h2>
-      <p>NPCs powered by large language models with their own memories. Coming soon.</p>
-    </div>
-    <div class="card">
-      <div class="card-icon">🏆</div>
-      <h2>Leaderboards</h2>
-      <p>Compete for glory on global and seasonal rankings. Coming soon.</p>
-    </div>
-  </div>
-
-  <section id="characters-section" style="margin-top: 64px; width: 100%; max-width: 1200px;">
-    <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-bottom: 24px;">
+  <section id="characters-section" style="margin-top: 16px; width: 100%; max-width: 1600px;">
+    <div id="shared-map-section" style="display: flex; flex-direction: column; align-items: center; gap: 8px;"></div>
+    <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-top: 32px; margin-bottom: 16px;">
       Your Characters
     </h2>
-    <div id="characters-container" style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;"></div>
+    <div id="characters-container" style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-items: flex-start;"></div>
     <p id="characters-error" style="display: none; text-align: center; color: #805030; font-size: 0.8rem; margin-top: 16px;"></p>
   </section>
+
+  <div id="char-popover"></div>
+
+  <div id="tile-popover">
+    <div class="pop-name" id="pop-name"></div>
+    <div class="pop-coords" id="pop-coords"></div>
+    <div class="pop-coords" id="pop-mapid"></div>
+  </div>
 
   <footer>
     &copy; 2026 Artifacts MMO &mdash; All rights reserved
@@ -392,60 +472,165 @@
       ctx.fillText('(' + char.x + ', ' + char.y + ')', CARD_W - PADDING, cy + 14);
     }
 
-    // ── Minimap grid ─────────────────────────────────────────────────────────
-    function buildMinimapGrid(tileMap, charX, charY) {
-      const section = document.createElement('div');
-      section.className = 'map-section';
+    // ── Shared map ───────────────────────────────────────────────────────────
+    function makeTileCell(tile, characters) {
+      const cell = document.createElement('div');
+      cell.className = 'map-tile';
+
+      if (tile?.skin) {
+        const img = document.createElement('img');
+        img.src = '/' + tile.skin + '.png';
+        img.alt = tile.skin;
+        cell.appendChild(img);
+      }
+
+      if (tile) {
+        characters.forEach(char => {
+          if (char.x === tile.x && char.y === tile.y && char.skin) {
+            const marker = document.createElement('img');
+            marker.src = '/' + char.skin + '.png';
+            marker.alt = char.skin;
+            marker.className = 'char-marker';
+            marker.addEventListener('click', e => {
+              e.stopPropagation();
+              showCharPopover(marker, char);
+            });
+            cell.appendChild(marker);
+          }
+        });
+
+        cell.addEventListener('click', e => {
+          e.stopPropagation();
+          const pop = document.getElementById('tile-popover');
+          if (pop._activeTile === cell && pop.style.display === 'block') {
+            pop.style.display = 'none';
+            pop._activeTile = null;
+            return;
+          }
+          pop._activeTile = cell;
+          document.getElementById('pop-name').textContent = tile.name ?? tile.skin ?? '';
+          document.getElementById('pop-coords').textContent = `(${tile.x}, ${tile.y})`;
+          document.getElementById('pop-mapid').textContent = tile.map_id != null ? `map id: ${tile.map_id}` : '';
+          pop.style.display = 'block';
+          const rect = cell.getBoundingClientRect();
+          const pw = pop.offsetWidth;
+          const ph = pop.offsetHeight;
+          let left = rect.left + rect.width / 2 - pw / 2;
+          let top  = rect.top - ph - 8;
+          if (top < 8) top = rect.bottom + 8;
+          left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+          pop.style.left = left + 'px';
+          pop.style.top  = top  + 'px';
+        });
+      }
+
+      return cell;
+    }
+
+    function buildSharedMap(characters, tileMap, charCells) {
+      const xs = characters.map(c => c.x);
+      const ys = characters.map(c => c.y);
+      const minX = Math.min(...xs) - VIEW_R;
+      const maxX = Math.max(...xs) + VIEW_R;
+      const minY = Math.min(...ys) - VIEW_R;
+      const maxY = Math.max(...ys) + VIEW_R;
+      const cols = maxX - minX + 1;
+      const rows = maxY - minY + 1;
 
       const label = document.createElement('div');
       label.className = 'map-label';
-      label.textContent = 'Current Map';
-      section.appendChild(label);
+      label.textContent = 'World Map';
+      document.getElementById('shared-map-section').appendChild(label);
 
       const grid = document.createElement('div');
       grid.className = 'map-grid';
+      grid.style.gridTemplateColumns = `repeat(${cols}, 80px)`;
+      grid.style.gridTemplateRows    = `repeat(${rows}, 80px)`;
 
-      for (let dy = -VIEW_R; dy <= VIEW_R; dy++) {
-        for (let dx = -VIEW_R; dx <= VIEW_R; dx++) {
-          const key  = (charX + dx) + ',' + (charY + dy);
-          const tile = tileMap[key];
-          const type = tile?.content?.type;
-
-          const cell = document.createElement('div');
-          cell.className = 'map-tile';
-
-          if (dx === 0 && dy === 0) cell.classList.add('char-pos');
-
-          if (tile?.skin) {
-            const img = document.createElement('img');
-            img.src = '/' + tile.skin + '.png';
-            img.alt = tile.skin;
-            cell.appendChild(img);
-          }
-
+      for (let ty = minY; ty <= maxY; ty++) {
+        for (let tx = minX; tx <= maxX; tx++) {
+          const cell = makeTileCell(tileMap[tx + ',' + ty], characters);
+          characters.forEach(char => {
+            if (char.x === tx && char.y === ty) charCells[char.name] = cell;
+          });
           grid.appendChild(cell);
         }
       }
 
-      section.appendChild(grid);
-      return section;
+      document.getElementById('shared-map-section').appendChild(grid);
     }
 
-    // ── Render one character entry ───────────────────────────────────────────
-    function renderCharacter(char, tileMap) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'char-wrapper';
+    // ── Character popover HTML ───────────────────────────────────────────────
+    function charPopoverHTML(char) {
+      function row(emoji, label, value) {
+        return `<div class="cp-row"><span>${emoji} ${label}</span><span>${value}</span></div>`;
+      }
+      return `
+        <div class="cp-name">${char.name}</div>
+        ${row('⭐', 'Level',          char.level)}
+        ${row('❤️', 'HP',             `${char.hp} / ${char.max_hp}`)}
+        ${row('✨', 'XP',             `${char.xp} / ${char.max_xp}`)}
+        ${row('💰', 'Gold',           char.gold ?? 0)}
+        ${row('📍', 'Position',       `(${char.x}, ${char.y})`)}
+        <hr class="cp-divider"/>
+        ${row('⛏️',  'Mining',         char.mining_level ?? 1)}
+        ${row('🪓',  'Woodcutting',    char.woodcutting_level ?? 1)}
+        ${row('🎣',  'Fishing',        char.fishing_level ?? 1)}
+        ${row('🍳',  'Cooking',        char.cooking_level ?? 1)}
+        ${row('⚔️',  'Weaponcrafting', char.weaponcrafting_level ?? 1)}
+        ${row('🛡️',  'Gearcrafting',   char.gearcrafting_level ?? 1)}
+        ${row('💎',  'Jewelrycrafting',char.jewelrycrafting_level ?? 1)}
+        ${row('⚗️',  'Alchemy',        char.alchemy_level ?? 1)}
+      `;
+    }
 
-      const canvas = document.createElement('canvas');
-      canvas.width  = CARD_W;
-      canvas.height = CARD_H;
-      canvas.style.display = 'block';
-      drawCharacterCard(canvas.getContext('2d'), char);
+    function showCharPopover(anchor, char) {
+      const pop = document.getElementById('char-popover');
+      if (pop._activeCanvas === anchor && pop.style.display === 'block') {
+        pop.style.display = 'none';
+        pop._activeCanvas = null;
+        return;
+      }
+      pop._activeCanvas = anchor;
+      pop.innerHTML = charPopoverHTML(char);
+      pop.style.display = 'block';
+      const rect = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+      let left = rect.right + 12;
+      let top  = rect.top;
+      if (left + pw > window.innerWidth - 8) left = rect.left - pw - 12;
+      top = Math.max(8, Math.min(top, window.innerHeight - ph - 8));
+      pop.style.left = left + 'px';
+      pop.style.top  = top  + 'px';
+    }
 
-      wrapper.appendChild(canvas);
-      wrapper.appendChild(buildMinimapGrid(tileMap, char.x, char.y));
+    // ── Render one character sprite + name ──────────────────────────────────
+    function renderCharacter(char, charCells) {
+      const item = document.createElement('div');
+      item.className = 'char-sprite-item';
 
-      document.getElementById('characters-container').appendChild(wrapper);
+      const img = document.createElement('img');
+      img.src = '/' + char.skin + '.png';
+      img.alt = char.name;
+      item.appendChild(img);
+
+      const name = document.createElement('div');
+      name.className = 'char-sprite-name';
+      name.textContent = char.name;
+      item.appendChild(name);
+
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        // Deactivate all other sprite items and clear map highlights
+        document.querySelectorAll('.char-sprite-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.map-tile').forEach(el => el.classList.remove('char-highlighted'));
+        // Activate this one and highlight on map
+        item.classList.add('active');
+        if (charCells[char.name]) charCells[char.name].classList.add('char-highlighted');
+      });
+
+      document.getElementById('characters-container').appendChild(item);
     }
 
     // ── Data loading ─────────────────────────────────────────────────────────
@@ -467,13 +652,17 @@
         ...restJsons.flatMap(j => j.data ?? []),
       ];
 
+      const xs = characters.map(c => c.x);
+      const ys = characters.map(c => c.y);
+      const minX = Math.min(...xs) - VIEW_R;
+      const maxX = Math.max(...xs) + VIEW_R;
+      const minY = Math.min(...ys) - VIEW_R;
+      const maxY = Math.max(...ys) + VIEW_R;
+
       const tileMap = {};
       maps.forEach(tile => {
         if (tile.layer !== 'overworld') return;
-        const inRange = characters.some(char =>
-          Math.abs(tile.x - char.x) <= VIEW_R && Math.abs(tile.y - char.y) <= VIEW_R
-        );
-        if (inRange) {
+        if (tile.x >= minX && tile.x <= maxX && tile.y >= minY && tile.y <= maxY) {
           tileMap[tile.x + ',' + tile.y] = tile;
         }
       });
@@ -497,12 +686,23 @@
           return;
         }
 
-        characters.forEach(char => renderCharacter(char, tileMap));
+        const charCells = {};
+        buildSharedMap(characters, tileMap, charCells);
+        characters.forEach(char => renderCharacter(char, charCells));
       } catch (e) {
         document.getElementById('characters-error').style.display = 'block';
         document.getElementById('characters-error').textContent = 'Could not load data: ' + e.message;
       }
     }
+
+    document.addEventListener('click', () => {
+      const tp = document.getElementById('tile-popover');
+      tp.style.display = 'none';
+      tp._activeTile = null;
+      const cp = document.getElementById('char-popover');
+      cp.style.display = 'none';
+      cp._activeCanvas = null;
+    });
 
     init();
   </script>
