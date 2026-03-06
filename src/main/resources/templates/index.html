@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8"></meta>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+  <title>Artifacts MMO</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0d0d0d;
+      color: #e0c97f;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      color: #f0d060;
+      text-shadow: 0 0 20px #f0a020;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+
+    .tagline {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #a08040;
+      letter-spacing: 2px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 32px;
+      background: #1a1a1a;
+      border: 1px solid #3a3010;
+      border-radius: 6px;
+      padding: 16px 32px;
+      margin-bottom: 48px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: #806030;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      color: #f0d060;
+      margin-top: 4px;
+    }
+
+    .stat-value.online {
+      color: #40c060;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #3a3010;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      border-color: #f0a020;
+      box-shadow: 0 0 12px #f0a02033;
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      color: #f0d060;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 0.8rem;
+      color: #806030;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: 64px;
+      font-size: 0.7rem;
+      color: #503020;
+      letter-spacing: 1px;
+    }
+
+    .char-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .map-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .map-label {
+      font-size: 0.6rem;
+      color: #a08040;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .map-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 80px);
+      grid-template-rows: repeat(9, 80px);
+      border: 1px solid #3a3010;
+      gap: 0;
+    }
+
+    .map-tile {
+      width: 80px;
+      height: 80px;
+      position: relative;
+      border: 0.5px solid rgba(0, 0, 0, 0.4);
+      background-color: #111;
+      overflow: hidden;
+    }
+
+    .map-tile img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .map-tile.char-pos::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f0d060;
+      border: 1px solid #fff;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Artifacts</h1>
+    <p class="tagline">The MMO Simulator</p>
+  </header>
+
+  <div class="status-bar">
+    <div class="stat">
+      <div class="stat-label">Server</div>
+      <div class="stat-value online" th:text="${serverStatus}">ONLINE</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Adventurers Online</div>
+      <div class="stat-value" th:text="${playersOnline}">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Monsters Slain</div>
+      <div class="stat-value" th:text="${monstersSlain}">0</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">⚔️</div>
+      <h2>Combat</h2>
+      <p>Battle fearsome creatures across procedurally generated dungeons. Coming soon.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🗺️</div>
+      <h2>Exploration</h2>
+      <p>Discover uncharted lands, hidden ruins, and ancient secrets. Coming soon.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧙</div>
+      <h2>AI Companions</h2>
+      <p>NPCs powered by large language models with their own memories. Coming soon.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏆</div>
+      <h2>Leaderboards</h2>
+      <p>Compete for glory on global and seasonal rankings. Coming soon.</p>
+    </div>
+  </div>
+
+  <section id="characters-section" style="margin-top: 64px; width: 100%; max-width: 1200px;">
+    <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-bottom: 24px;">
+      Your Characters
+    </h2>
+    <div id="characters-container" style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;"></div>
+    <p id="characters-error" style="display: none; text-align: center; color: #805030; font-size: 0.8rem; margin-top: 16px;"></p>
+  </section>
+
+  <footer>
+    &copy; 2026 Artifacts MMO &mdash; All rights reserved
+  </footer>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────────────────────
+    const CARD_W   = 320;
+    const CARD_H   = 310;
+    const PADDING  = 24;
+    const RADIUS   = 10;
+    const VIEW_R   = 4;   // tiles visible in each direction (9×9 view)
+
+    const GOLD     = '#f0d060';
+    const GOLD_DIM = '#a08040';
+    const BG_CARD  = '#1a1a1a';
+    const BORDER   = '#3a3010';
+    const BLUE     = '#4090e0';
+    const RED      = '#c04040';
+    const BG_BAR   = '#2a2a2a';
+
+    // ── Canvas helpers ───────────────────────────────────────────────────────
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y,     x + w, y + r,     r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h,     x, y + h - r,     r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y,         x + r, y,          r);
+      ctx.closePath();
+    }
+
+    function drawBar(ctx, x, y, w, h, frac, color, label, text) {
+      ctx.fillStyle = BG_BAR;
+      roundRect(ctx, x, y, w, h, 3);
+      ctx.fill();
+      ctx.fillStyle = color;
+      roundRect(ctx, x, y, Math.max(0, w * Math.min(frac, 1)), h, 3);
+      ctx.fill();
+      ctx.fillStyle = GOLD_DIM;
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, x, y - 4);
+      ctx.textAlign = 'right';
+      ctx.fillText(text, x + w, y - 4);
+    }
+
+    function drawSkillRow(ctx, bx, y, skills) {
+      const colW = (CARD_W - PADDING * 2) / skills.length;
+      skills.forEach((s, i) => {
+        const cx = bx + i * colW + colW / 2;
+        ctx.fillStyle = GOLD_DIM;
+        ctx.font = '9px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(s.label, cx, y);
+        ctx.fillStyle = GOLD;
+        ctx.font = 'bold 13px Courier New';
+        ctx.fillText(s.value, cx, y + 14);
+      });
+    }
+
+    // ── Character card ───────────────────────────────────────────────────────
+    function drawCharacterCard(ctx, char) {
+      ctx.fillStyle = BG_CARD;
+      roundRect(ctx, 0, 0, CARD_W, CARD_H, RADIUS);
+      ctx.fill();
+      ctx.strokeStyle = BORDER;
+      ctx.lineWidth = 1;
+      roundRect(ctx, 0, 0, CARD_W, CARD_H, RADIUS);
+      ctx.stroke();
+
+      const bx = PADDING;
+      let cy = PADDING;
+
+      // Name
+      ctx.fillStyle = GOLD;
+      ctx.font = 'bold 16px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText(char.name, bx, cy + 12);
+
+      // Level badge
+      ctx.fillStyle = '#2a2010';
+      roundRect(ctx, CARD_W - PADDING - 52, cy, 52, 22, 4);
+      ctx.fill();
+      ctx.strokeStyle = BORDER;
+      roundRect(ctx, CARD_W - PADDING - 52, cy, 52, 22, 4);
+      ctx.stroke();
+      ctx.fillStyle = GOLD;
+      ctx.font = '11px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('LVL ' + char.level, CARD_W - PADDING - 26, cy + 14);
+      cy += 30;
+
+      // HP bar
+      drawBar(ctx, bx, cy + 12, CARD_W - PADDING * 2, 10,
+        char.max_hp > 0 ? char.hp / char.max_hp : 0,
+        RED, 'HP', char.hp + ' / ' + char.max_hp);
+      cy += 36;
+
+      // XP bar
+      drawBar(ctx, bx, cy + 12, CARD_W - PADDING * 2, 10,
+        char.max_xp > 0 ? char.xp / char.max_xp : 0,
+        BLUE, 'XP', char.xp + ' / ' + char.max_xp);
+      cy += 36;
+
+      // Divider
+      ctx.strokeStyle = BORDER;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(bx, cy);
+      ctx.lineTo(CARD_W - PADDING, cy);
+      ctx.stroke();
+      cy += 16;
+
+      drawSkillRow(ctx, bx, cy, [
+        { label: 'MINING',   value: char.mining_level ?? 1 },
+        { label: 'WOODCUT',  value: char.woodcutting_level ?? 1 },
+        { label: 'FISHING',  value: char.fishing_level ?? 1 },
+        { label: 'COOKING',  value: char.cooking_level ?? 1 },
+      ]);
+      cy += 36;
+
+      drawSkillRow(ctx, bx, cy, [
+        { label: 'WEAPON',   value: char.weaponcrafting_level ?? 1 },
+        { label: 'GEAR',     value: char.gearcrafting_level ?? 1 },
+        { label: 'JEWELRY',  value: char.jewelrycrafting_level ?? 1 },
+        { label: 'ALCHEMY',  value: char.alchemy_level ?? 1 },
+      ]);
+      cy += 40;
+
+      // Divider
+      ctx.strokeStyle = BORDER;
+      ctx.beginPath();
+      ctx.moveTo(bx, cy);
+      ctx.lineTo(CARD_W - PADDING, cy);
+      ctx.stroke();
+      cy += 14;
+
+      // Gold + position
+      ctx.fillStyle = GOLD_DIM;
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'left';
+      ctx.fillText('GOLD', bx, cy);
+      ctx.fillStyle = GOLD;
+      ctx.font = 'bold 12px Courier New';
+      ctx.fillText(char.gold ?? 0, bx, cy + 14);
+
+      ctx.fillStyle = GOLD_DIM;
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'right';
+      ctx.fillText('POSITION', CARD_W - PADDING, cy);
+      ctx.fillStyle = GOLD;
+      ctx.font = 'bold 12px Courier New';
+      ctx.fillText('(' + char.x + ', ' + char.y + ')', CARD_W - PADDING, cy + 14);
+    }
+
+    // ── Minimap grid ─────────────────────────────────────────────────────────
+    function buildMinimapGrid(tileMap, charX, charY) {
+      const section = document.createElement('div');
+      section.className = 'map-section';
+
+      const label = document.createElement('div');
+      label.className = 'map-label';
+      label.textContent = 'Current Map';
+      section.appendChild(label);
+
+      const grid = document.createElement('div');
+      grid.className = 'map-grid';
+
+      for (let dy = -VIEW_R; dy <= VIEW_R; dy++) {
+        for (let dx = -VIEW_R; dx <= VIEW_R; dx++) {
+          const key  = (charX + dx) + ',' + (charY + dy);
+          const tile = tileMap[key];
+          const type = tile?.content?.type;
+
+          const cell = document.createElement('div');
+          cell.className = 'map-tile';
+
+          if (dx === 0 && dy === 0) cell.classList.add('char-pos');
+
+          if (tile?.skin) {
+            const img = document.createElement('img');
+            img.src = '/' + tile.skin + '.png';
+            img.alt = tile.skin;
+            cell.appendChild(img);
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+
+      section.appendChild(grid);
+      return section;
+    }
+
+    // ── Render one character entry ───────────────────────────────────────────
+    function renderCharacter(char, tileMap) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'char-wrapper';
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = CARD_W;
+      canvas.height = CARD_H;
+      canvas.style.display = 'block';
+      drawCharacterCard(canvas.getContext('2d'), char);
+
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(buildMinimapGrid(tileMap, char.x, char.y));
+
+      document.getElementById('characters-container').appendChild(wrapper);
+    }
+
+    // ── Data loading ─────────────────────────────────────────────────────────
+
+    // Fetches all maps across all pages then filters for tiles visible in any character's minimap.
+    async function loadCharacterMaps(characters) {
+      const firstRes = await fetch('/maps?size=500&page=1');
+      const firstJson = await firstRes.json();
+      const totalPages = firstJson.pages ?? 1;
+
+      const pagePromises = [];
+      for (let p = 2; p <= totalPages; p++) {
+        pagePromises.push(fetch('/maps?size=500&page=' + p).then(r => r.json()));
+      }
+      const restJsons = await Promise.all(pagePromises);
+
+      const maps = [
+        ...(firstJson.data ?? []),
+        ...restJsons.flatMap(j => j.data ?? []),
+      ];
+
+      const tileMap = {};
+      maps.forEach(tile => {
+        if (tile.layer !== 'overworld') return;
+        const inRange = characters.some(char =>
+          Math.abs(tile.x - char.x) <= VIEW_R && Math.abs(tile.y - char.y) <= VIEW_R
+        );
+        if (inRange) {
+          tileMap[tile.x + ',' + tile.y] = tile;
+        }
+      });
+
+      return tileMap;
+    }
+
+    async function init() {
+      try {
+        const charsRes = await fetch('/my/characters').then(r => r.json());
+        const characters = charsRes.data ?? [];
+
+        const [_, tileMap] = await Promise.all([
+          Promise.resolve(),
+          loadCharacterMaps(characters),
+        ]);
+
+        if (characters.length === 0) {
+          document.getElementById('characters-error').style.display = 'block';
+          document.getElementById('characters-error').textContent = 'No characters found.';
+          return;
+        }
+
+        characters.forEach(char => renderCharacter(char, tileMap));
+      } catch (e) {
+        document.getElementById('characters-error').style.display = 'block';
+        document.getElementById('characters-error').textContent = 'Could not load data: ' + e.message;
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

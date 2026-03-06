@@ -28,7 +28,7 @@ Artifacts is a backend application for an "MMO Simulator," built using **Spring 
   ```
 - **Run the application:**
   ```powershell
-  ./mvnw spring-boot:run
+  GOOGLE_APPLICATION_CREDENTIALS="C:\Users\hokep\Downloads\cakenet-cloud-services-9c207cc4ebd8.json" ./mvnw spring-boot:run
   ```
 - **Run tests:**
   ```powershell
