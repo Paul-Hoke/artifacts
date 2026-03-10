@@ -287,6 +287,33 @@
       font-size: 0.7rem;
       color: #a08040;
     }
+
+    #walk-toggle {
+      font-family: 'Courier New', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: transparent;
+      border: 1px solid #40c060;
+      color: #40c060;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    #walk-toggle:hover {
+      background: #40c06022;
+    }
+
+    #walk-toggle.walk-off {
+      border-color: #c04040;
+      color: #c04040;
+    }
+
+    #walk-toggle.walk-off:hover {
+      background: #c0404022;
+    }
   </style>
 </head>
 <body>
@@ -297,7 +324,12 @@
 
 
   <section id="characters-section" style="margin-top: 16px; width: 100%; max-width: 1600px;">
-    <div id="shared-map-section" style="display: flex; flex-direction: column; align-items: center; gap: 8px;"></div>
+    <div id="shared-map-section" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <span class="map-label" id="map-header-label">World Map</span>
+        <button id="walk-toggle" title="Toggle auto random walk">Start Auto-Walk</button>
+      </div>
+    </div>
     <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-top: 32px; margin-bottom: 16px;">
       Your Characters
     </h2>
@@ -317,7 +349,16 @@
     &copy; 2026 Artifacts MMO &mdash; All rights reserved
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
   <script>
+    // ── Module-level state (for WebSocket updates) ───────────────────────────
+    let cellsByPosition = {};  // "x,y" → cell element
+    let charMarkers     = {};  // charName → marker img element
+    let charCells       = {};  // charName → cell element (for highlight)
+    let charDataMap     = {};  // charName → char data object
+    let charAnimations  = {};  // charName → cancel function for in-flight animation
+
     // ── Constants ────────────────────────────────────────────────────────────
     const CARD_W   = 320;
     const CARD_H   = 310;
@@ -477,6 +518,10 @@
       const cell = document.createElement('div');
       cell.className = 'map-tile';
 
+      if (tile) {
+        cellsByPosition[tile.x + ',' + tile.y] = cell;
+      }
+
       if (tile?.skin) {
         const img = document.createElement('img');
         img.src = '/' + tile.skin + '.png';
@@ -491,10 +536,12 @@
             marker.src = '/' + char.skin + '.png';
             marker.alt = char.skin;
             marker.className = 'char-marker';
+            marker.dataset.charName = char.name;
             marker.addEventListener('click', e => {
               e.stopPropagation();
-              showCharPopover(marker, char);
+              showCharPopover(marker, charDataMap[char.name] ?? char);
             });
+            charMarkers[char.name] = marker;
             cell.appendChild(marker);
           }
         });
@@ -527,20 +574,16 @@
       return cell;
     }
 
-    function buildSharedMap(characters, tileMap, charCells) {
-      const xs = characters.map(c => c.x);
-      const ys = characters.map(c => c.y);
-      const minX = Math.min(...xs) - VIEW_R;
-      const maxX = Math.max(...xs) + VIEW_R;
-      const minY = Math.min(...ys) - VIEW_R;
-      const maxY = Math.max(...ys) + VIEW_R;
+    function buildSharedMap(characters, tileMap) {
+      const tilePositions = Object.keys(tileMap).map(k => k.split(',').map(Number));
+      const allX = tilePositions.map(p => p[0]);
+      const allY = tilePositions.map(p => p[1]);
+      const minX = Math.min(...allX);
+      const maxX = Math.max(...allX);
+      const minY = Math.min(...allY);
+      const maxY = Math.max(...allY);
       const cols = maxX - minX + 1;
       const rows = maxY - minY + 1;
-
-      const label = document.createElement('div');
-      label.className = 'map-label';
-      label.textContent = 'World Map';
-      document.getElementById('shared-map-section').appendChild(label);
 
       const grid = document.createElement('div');
       grid.className = 'map-grid';
@@ -606,7 +649,7 @@
     }
 
     // ── Render one character sprite + name ──────────────────────────────────
-    function renderCharacter(char, charCells) {
+    function renderCharacter(char) {
       const item = document.createElement('div');
       item.className = 'char-sprite-item';
 
@@ -635,8 +678,8 @@
 
     // ── Data loading ─────────────────────────────────────────────────────────
 
-    // Fetches all maps across all pages then filters for tiles visible in any character's minimap.
-    async function loadCharacterMaps(characters) {
+    // Fetches all overworld map tiles across all pages.
+    async function loadOverworldTiles() {
       const firstRes = await fetch('/maps?size=500&page=1');
       const firstJson = await firstRes.json();
       const totalPages = firstJson.pages ?? 1;
@@ -647,22 +690,13 @@
       }
       const restJsons = await Promise.all(pagePromises);
 
-      const maps = [
+      const tileMap = {};
+      const allData = [
         ...(firstJson.data ?? []),
         ...restJsons.flatMap(j => j.data ?? []),
       ];
-
-      const xs = characters.map(c => c.x);
-      const ys = characters.map(c => c.y);
-      const minX = Math.min(...xs) - VIEW_R;
-      const maxX = Math.max(...xs) + VIEW_R;
-      const minY = Math.min(...ys) - VIEW_R;
-      const maxY = Math.max(...ys) + VIEW_R;
-
-      const tileMap = {};
-      maps.forEach(tile => {
-        if (tile.layer !== 'overworld') return;
-        if (tile.x >= minX && tile.x <= maxX && tile.y >= minY && tile.y <= maxY) {
+      allData.forEach(tile => {
+        if (tile.layer === 'overworld') {
           tileMap[tile.x + ',' + tile.y] = tile;
         }
       });
@@ -670,15 +704,166 @@
       return tileMap;
     }
 
+    // ── Character movement animation ─────────────────────────────────────────
+    const TILE_PX    = 80;
+    const MARKER_PCT = 0.39;
+    const MARKER_PX  = TILE_PX * MARKER_PCT;
+
+    function animateCharacterMove(name, fromCell, toCell, durationMs) {
+      const marker = charMarkers[name];
+      if (!marker) return;
+
+      // Cancel any in-flight animation for this character
+      if (charAnimations[name]) {
+        charAnimations[name]();
+        delete charAnimations[name];
+      }
+
+      // Detach from current parent
+      if (marker.parentElement) marker.parentElement.removeChild(marker);
+
+      // Destination off-map: leave marker hidden
+      if (!toCell) return;
+
+      // No source cell or negligible duration: snap immediately
+      if (!fromCell || durationMs < 50) {
+        toCell.appendChild(marker);
+        return;
+      }
+
+      const fromRect = fromCell.getBoundingClientRect();
+      const toRect   = toCell.getBoundingClientRect();
+      const startX   = fromRect.left + window.scrollX + (TILE_PX - MARKER_PX) / 2;
+      const startY   = fromRect.top  + window.scrollY + (TILE_PX - MARKER_PX) / 2;
+      const endX     = toRect.left   + window.scrollX + (TILE_PX - MARKER_PX) / 2;
+      const endY     = toRect.top    + window.scrollY + (TILE_PX - MARKER_PX) / 2;
+
+      // Fly as an absolute-position overlay so it escapes cell overflow:hidden
+      // and scrolls with the page (unlike fixed)
+      marker.style.cssText = [
+        'position:absolute',
+        `width:${MARKER_PX}px`,
+        `height:${MARKER_PX}px`,
+        `left:${startX}px`,
+        `top:${startY}px`,
+        'z-index:500',
+        'image-rendering:pixelated',
+        'object-fit:contain',
+        'cursor:pointer',
+        `transition:left ${durationMs}ms linear,top ${durationMs}ms linear`,
+      ].join(';');
+      document.body.appendChild(marker);
+
+      let settled = false;
+
+      function settle() {
+        if (settled) return;
+        settled = true;
+        delete charAnimations[name];
+        if (marker.parentElement) marker.parentElement.removeChild(marker);
+        marker.removeAttribute('style');
+        toCell.appendChild(marker);
+      }
+
+      function cancel() {
+        if (settled) return;
+        settled = true;
+        if (marker.parentElement) marker.parentElement.removeChild(marker);
+        marker.removeAttribute('style');
+      }
+
+      charAnimations[name] = cancel;
+
+      // Force reflow, then start transition
+      marker.getBoundingClientRect();
+      marker.style.left = endX + 'px';
+      marker.style.top  = endY + 'px';
+
+      marker.addEventListener('transitionend', settle, { once: true });
+      setTimeout(settle, durationMs + 200); // safety net if transitionend misfires
+    }
+
+    // ── WebSocket position update ─────────────────────────────────────────────
+    function updateCharacterPosition(update) {
+      const marker = charMarkers[update.name];
+      if (!marker) return;
+
+      const fromCell   = charCells[update.name] ?? null;
+      const newCell    = cellsByPosition[update.x + ',' + update.y] ?? null;
+      const durationMs = Math.round((update.cooldownSeconds ?? 0) * 1000);
+
+      // Update tracking state immediately
+      charCells[update.name] = newCell;
+
+      const charData = charDataMap[update.name];
+      if (charData) {
+        charData.x = update.x;
+        charData.y = update.y;
+        charData.skin = update.skin;
+      }
+
+      animateCharacterMove(update.name, fromCell, newCell, durationMs);
+
+      // Move map highlight to destination
+      const activeItem = document.querySelector('.char-sprite-item.active');
+      if (activeItem) {
+        const nameEl = activeItem.querySelector('.char-sprite-name');
+        if (nameEl && nameEl.textContent === update.name) {
+          document.querySelectorAll('.map-tile').forEach(el => el.classList.remove('char-highlighted'));
+          if (newCell) newCell.classList.add('char-highlighted');
+        }
+      }
+    }
+
+    // ── Auto-walk toggle ─────────────────────────────────────────────────────
+    let walkerEnabled = true; // matches server default
+
+    function applyWalkToggleState(enabled) {
+      walkerEnabled = enabled;
+      const btn = document.getElementById('walk-toggle');
+      if (!btn) return;
+      if (enabled) {
+        btn.textContent = 'Stop Auto-Walk';
+        btn.classList.remove('walk-off');
+      } else {
+        btn.textContent = 'Start Auto-Walk';
+        btn.classList.add('walk-off');
+      }
+    }
+
+    function initWalkToggle() {
+      fetch('/api/random-walk/state')
+        .then(r => r.json())
+        .then(data => applyWalkToggleState(data.enabled))
+        .catch(() => {});
+
+      document.getElementById('walk-toggle').addEventListener('click', () => {
+        const endpoint = walkerEnabled ? '/api/random-walk/stop' : '/api/random-walk/start';
+        fetch(endpoint, { method: 'POST' }).catch(() => {});
+        // State will update via WebSocket broadcast
+      });
+    }
+
+    function connectWebSocket() {
+      const socket = new SockJS('/ws');
+      const stompClient = Stomp.over(socket);
+      stompClient.debug = null; // suppress console noise
+      stompClient.connect({}, () => {
+        stompClient.subscribe('/topic/characters', msg => {
+          const update = JSON.parse(msg.body);
+          updateCharacterPosition(update);
+        });
+        stompClient.subscribe('/topic/walker-state', msg => {
+          const state = JSON.parse(msg.body);
+          applyWalkToggleState(state.enabled);
+        });
+      });
+    }
+
     async function init() {
       try {
         const charsRes = await fetch('/my/characters').then(r => r.json());
         const characters = charsRes.data ?? [];
-
-        const [_, tileMap] = await Promise.all([
-          Promise.resolve(),
-          loadCharacterMaps(characters),
-        ]);
 
         if (characters.length === 0) {
           document.getElementById('characters-error').style.display = 'block';
@@ -686,9 +871,21 @@
           return;
         }
 
-        const charCells = {};
-        buildSharedMap(characters, tileMap, charCells);
-        characters.forEach(char => renderCharacter(char, charCells));
+        const tileMap = await loadOverworldTiles();
+
+        // Reset module-level state
+        cellsByPosition = {};
+        charMarkers     = {};
+        charCells       = {};
+        charDataMap     = {};
+        charAnimations  = {};
+        characters.forEach(char => { charDataMap[char.name] = char; });
+
+        buildSharedMap(characters, tileMap);
+        characters.forEach(char => renderCharacter(char));
+
+        connectWebSocket();
+        initWalkToggle();
       } catch (e) {
         document.getElementById('characters-error').style.display = 'block';
         document.getElementById('characters-error').textContent = 'Could not load data: ' + e.message;

@@ -3,19 +3,39 @@ package com.paul.artifacts.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.paul.artifacts.client.ArtifactsApiClient;
 import com.paul.artifacts.model.request.*;
+import com.paul.artifacts.model.ws.CharacterPositionMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/my/{name}/action")
 @RequiredArgsConstructor
 public class CharacterActionController {
 
   private final ArtifactsApiClient client;
+  private final SimpMessagingTemplate messagingTemplate;
 
   @PostMapping("/move")
   public JsonNode move(@PathVariable String name, @RequestBody DestinationRequest request) {
-    return client.actionMove(name, request);
+    JsonNode response = client.actionMove(name, request);
+    JsonNode data = response.path("data");
+    JsonNode character = data.path("character");
+    if (!character.isMissingNode()) {
+      double cooldownSeconds = data.path("cooldown").path("total_seconds").asDouble(0);
+      CharacterPositionMessage msg = CharacterPositionMessage.builder()
+          .name(character.path("name").asText())
+          .skin(character.path("skin").asText())
+          .x(character.path("x").asInt())
+          .y(character.path("y").asInt())
+          .cooldownSeconds(cooldownSeconds)
+          .build();
+      log.debug("Broadcasting position update for {}: ({}, {}) cooldown={}s", msg.getName(), msg.getX(), msg.getY(), cooldownSeconds);
+      messagingTemplate.convertAndSend("/topic/characters", msg);
+    }
+    return response;
   }
 
   @PostMapping("/transition")
