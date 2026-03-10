@@ -1,6 +1,6 @@
 package com.paul.artifacts.controller;
 
-import com.paul.artifacts.scheduler.RandomWalkScheduler;
+import com.paul.artifacts.scheduler.CharacterLoopScheduler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RandomWalkController {
 
-  private final RandomWalkScheduler scheduler;
+  private final CharacterLoopScheduler scheduler;
   private final SimpMessagingTemplate messagingTemplate;
 
   @GetMapping("/state")
