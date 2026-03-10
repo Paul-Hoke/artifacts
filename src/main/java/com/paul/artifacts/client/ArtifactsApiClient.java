@@ -1,11 +1,13 @@
 package com.paul.artifacts.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.paul.artifacts.model.common.SimpleItem;
 import com.paul.artifacts.model.request.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -177,18 +179,18 @@ public class ArtifactsApiClient {
         .body(JsonNode.class);
   }
 
-  public JsonNode actionDepositBankItem(String name, ItemsRequest request) {
+  public JsonNode actionDepositBankItem(String name, List<SimpleItem> items) {
     return artifactsRestClient.post()
         .uri("/my/{name}/action/bank/deposit/item", name)
-        .body(request)
+        .body(items)
         .retrieve()
         .body(JsonNode.class);
   }
 
-  public JsonNode actionWithdrawBankItem(String name, ItemsRequest request) {
+  public JsonNode actionWithdrawBankItem(String name, List<SimpleItem> items) {
     return artifactsRestClient.post()
         .uri("/my/{name}/action/bank/withdraw/item", name)
-        .body(request)
+        .body(items)
         .retrieve()
         .body(JsonNode.class);
   }

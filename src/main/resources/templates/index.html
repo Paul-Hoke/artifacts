@@ -222,6 +222,39 @@
       margin: 8px 0;
     }
 
+    #char-popover .cp-section {
+      font-size: 0.6rem;
+      color: #806030;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 8px 0 4px;
+    }
+
+    #char-popover .cp-inventory {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    #char-popover .cp-inv-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.7rem;
+      color: #a08040;
+    }
+
+    #char-popover .cp-inv-row span:last-child {
+      color: #e0c97f;
+      text-align: right;
+    }
+
+    #char-popover .cp-empty {
+      font-size: 0.7rem;
+      color: #503020;
+      font-style: italic;
+    }
+
     #tile-popover {
       display: none;
       position: fixed;
@@ -243,15 +276,15 @@
     }
 
     .char-sprite-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
       cursor: pointer;
-      padding: 8px;
+      padding: 16px;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: 8px;
       transition: border-color 0.15s;
+      background: #1a1a1a;
+      min-width: 240px;
+      flex: 1 1 240px;
+      max-width: 340px;
     }
 
     .char-sprite-item:hover {
@@ -263,18 +296,74 @@
       box-shadow: 0 0 8px #f0a02044;
     }
 
-    .char-sprite-item img {
-      width: 64px;
-      height: 64px;
-      image-rendering: pixelated;
-      object-fit: contain;
+    .csi-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
     }
 
-    .char-sprite-name {
-      font-size: 0.65rem;
+    .csi-header img {
+      width: 48px;
+      height: 48px;
+      image-rendering: pixelated;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .csi-name {
+      font-size: 0.85rem;
       color: #f0d060;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
       text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .csi-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #a08040;
+      margin-bottom: 3px;
+    }
+
+    .csi-row span:last-child {
+      color: #e0c97f;
+      text-align: right;
+    }
+
+    .csi-divider {
+      border: none;
+      border-top: 1px solid #3a3010;
+      margin: 8px 0;
+    }
+
+    .csi-section {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.6rem;
+      color: #806030;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .csi-inv-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #a08040;
+      margin-bottom: 2px;
+    }
+
+    .csi-inv-row span:last-child {
+      color: #e0c97f;
+    }
+
+    .csi-empty {
+      font-size: 0.7rem;
+      color: #503020;
+      font-style: italic;
     }
 
     .map-tile.char-highlighted {
@@ -314,6 +403,28 @@
     #walk-toggle.walk-off:hover {
       background: #c0404022;
     }
+
+    .bank-item {
+      background: #1a1a1a;
+      border: 1px solid #3a3010;
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .bank-item-code {
+      color: #e0c97f;
+      letter-spacing: 0.5px;
+    }
+
+    .bank-item-qty {
+      color: #f0d060;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -327,7 +438,7 @@
     <div id="shared-map-section" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
       <div style="display: flex; align-items: center; gap: 16px;">
         <span class="map-label" id="map-header-label">World Map</span>
-        <button id="walk-toggle" title="Toggle auto random walk">Start Auto-Walk</button>
+        <button id="walk-toggle" title="Toggle character loop (gather → bank)">Start Loop</button>
       </div>
     </div>
     <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-top: 32px; margin-bottom: 16px;">
@@ -345,6 +456,20 @@
     <div class="pop-coords" id="pop-mapid"></div>
   </div>
 
+  <section id="bank-section" style="width: 100%; max-width: 900px; margin-top: 48px;">
+    <h2 style="text-align: center; font-size: 1rem; letter-spacing: 4px; text-transform: uppercase; color: #f0d060; margin-bottom: 16px;">
+      Bank
+    </h2>
+    <div id="bank-grid" style="
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    "></div>
+    <p id="bank-empty" style="display: none; text-align: center; color: #503020; font-size: 0.8rem; font-style: italic;">
+      Bank is empty
+    </p>
+  </section>
+
   <footer>
     &copy; 2026 Artifacts MMO &mdash; All rights reserved
   </footer>
@@ -358,6 +483,7 @@
     let charCells       = {};  // charName → cell element (for highlight)
     let charDataMap     = {};  // charName → char data object
     let charAnimations  = {};  // charName → cancel function for in-flight animation
+    let charCards       = {};  // charName → card element
 
     // ── Constants ────────────────────────────────────────────────────────────
     const VIEW_R   = 4;   // tiles visible in each direction (9×9 view)
@@ -457,6 +583,14 @@
       function row(emoji, label, value) {
         return `<div class="cp-row"><span>${emoji} ${label}</span><span>${value}</span></div>`;
       }
+
+      const items = (char.inventory ?? []).filter(s => s.code);
+      const inventoryHTML = items.length === 0
+        ? `<div class="cp-empty">Empty</div>`
+        : `<div class="cp-inventory">${items.map(s =>
+            `<div class="cp-inv-row"><span>${s.code}</span><span>x${s.quantity}</span></div>`
+          ).join('')}</div>`;
+
       return `
         <div class="cp-name">${char.name}</div>
         ${row('⭐', 'Level',          char.level)}
@@ -473,6 +607,12 @@
         ${row('🛡️',  'Gearcrafting',   char.gearcrafting_level ?? 1)}
         ${row('💎',  'Jewelrycrafting',char.jewelrycrafting_level ?? 1)}
         ${row('⚗️',  'Alchemy',        char.alchemy_level ?? 1)}
+        <hr class="cp-divider"/>
+        <div class="cp-section" style="display:flex;justify-content:space-between;">
+          <span>Inventory</span>
+          <span style="color:#e0c97f;">${items.reduce((s, i) => s + (i.quantity ?? 0), 0)} items</span>
+        </div>
+        ${inventoryHTML}
       `;
     }
 
@@ -497,27 +637,54 @@
       pop.style.top  = top  + 'px';
     }
 
-    // ── Render one character sprite + name ──────────────────────────────────
+    // ── Character card HTML ───────────────────────────────────────────────────
+    function buildCharCardHTML(char) {
+      function row(emoji, label, value) {
+        return `<div class="csi-row"><span>${emoji} ${label}</span><span>${value}</span></div>`;
+      }
+
+      const items = (char.inventory ?? []).filter(s => s.code);
+      const totalItems = items.reduce((s, i) => s + (i.quantity ?? 0), 0);
+      const inventoryHTML = items.length === 0
+        ? `<div class="csi-empty">Empty</div>`
+        : items.map(s => `<div class="csi-inv-row"><span>${s.code}</span><span>x${s.quantity}</span></div>`).join('');
+
+      return `
+        <div class="csi-header">
+          <img src="/${char.skin}.png" alt="${char.name}"/>
+          <div class="csi-name">${char.name}</div>
+        </div>
+        ${row('⭐', 'Level',    char.level)}
+        ${row('❤️', 'HP',       `${char.hp} / ${char.max_hp}`)}
+        ${row('✨', 'XP',       `${char.xp} / ${char.max_xp}`)}
+        ${row('💰', 'Gold',     char.gold ?? 0)}
+        ${row('📍', 'Position', `(${char.x}, ${char.y})`)}
+        <hr class="csi-divider"/>
+        ${row('⛏️', 'Mining',         char.mining_level ?? 1)}
+        ${row('🪓', 'Woodcutting',    char.woodcutting_level ?? 1)}
+        ${row('🎣', 'Fishing',        char.fishing_level ?? 1)}
+        ${row('🍳', 'Cooking',        char.cooking_level ?? 1)}
+        ${row('⚔️', 'Weaponcrafting', char.weaponcrafting_level ?? 1)}
+        ${row('🛡️', 'Gearcrafting',   char.gearcrafting_level ?? 1)}
+        ${row('💎', 'Jewelrycrafting',char.jewelrycrafting_level ?? 1)}
+        ${row('⚗️', 'Alchemy',        char.alchemy_level ?? 1)}
+        <hr class="csi-divider"/>
+        <div class="csi-section"><span>Inventory</span><span>${totalItems} items</span></div>
+        ${inventoryHTML}
+      `;
+    }
+
+    // ── Render one character card ─────────────────────────────────────────────
     function renderCharacter(char) {
       const item = document.createElement('div');
       item.className = 'char-sprite-item';
-
-      const img = document.createElement('img');
-      img.src = '/' + char.skin + '.png';
-      img.alt = char.name;
-      item.appendChild(img);
-
-      const name = document.createElement('div');
-      name.className = 'char-sprite-name';
-      name.textContent = char.name;
-      item.appendChild(name);
+      item.innerHTML = buildCharCardHTML(char);
+      charCards[char.name] = item;
 
       item.addEventListener('click', e => {
         e.stopPropagation();
-        // Deactivate all other sprite items and clear map highlights
         document.querySelectorAll('.char-sprite-item').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.map-tile').forEach(el => el.classList.remove('char-highlighted'));
-        // Activate this one and highlight on map
         item.classList.add('active');
         if (charCells[char.name]) charCells[char.name].classList.add('char-highlighted');
       });
@@ -635,6 +802,11 @@
     // ── WebSocket position update ─────────────────────────────────────────────
     function updateCharacterPosition(update) {
       const marker = charMarkers[update.name];
+      console.log('[WS]', update.name, '→', update.x, update.y,
+          'cooldown:', update.cooldownSeconds,
+          'hasMarker:', !!marker,
+          'fromCell:', !!(charCells[update.name]),
+          'newCell:', !!(cellsByPosition[update.x + ',' + update.y]));
       if (!marker) return;
 
       const fromCell   = charCells[update.name] ?? null;
@@ -649,6 +821,8 @@
         charData.x = update.x;
         charData.y = update.y;
         charData.skin = update.skin;
+        if (update.inventory != null) charData.inventory = update.inventory;
+        if (charCards[update.name]) charCards[update.name].innerHTML = buildCharCardHTML(charData);
       }
 
       animateCharacterMove(update.name, fromCell, newCell, durationMs);
@@ -672,10 +846,10 @@
       const btn = document.getElementById('walk-toggle');
       if (!btn) return;
       if (enabled) {
-        btn.textContent = 'Stop Auto-Walk';
+        btn.textContent = 'Stop Loop';
         btn.classList.remove('walk-off');
       } else {
-        btn.textContent = 'Start Auto-Walk';
+        btn.textContent = 'Start Loop';
         btn.classList.add('walk-off');
       }
     }
@@ -693,6 +867,41 @@
       });
     }
 
+    // ── Bank section ──────────────────────────────────────────────────────────
+    function renderBankState(items) {
+      const grid  = document.getElementById('bank-grid');
+      const empty = document.getElementById('bank-empty');
+      grid.innerHTML = '';
+      if (!items || items.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bank-item';
+        card.innerHTML = `<span class="bank-item-code">${item.code}</span><span class="bank-item-qty">${item.quantity.toLocaleString()}</span>`;
+        grid.appendChild(card);
+      });
+    }
+
+    async function loadInitialBankState() {
+      try {
+        const res = await fetch('/my/bank/items?size=100&page=1');
+        const json = await res.json();
+        const pages = json.pages ?? 1;
+        let items = json.data ?? [];
+        for (let p = 2; p <= pages; p++) {
+          const r = await fetch(`/my/bank/items?size=100&page=${p}`);
+          const j = await r.json();
+          items = items.concat(j.data ?? []);
+        }
+        renderBankState(items.filter(i => i.code));
+      } catch (e) {
+        console.warn('Could not load bank state:', e);
+      }
+    }
+
     function connectWebSocket() {
       const socket = new SockJS('/ws');
       const stompClient = Stomp.over(socket);
@@ -705,6 +914,10 @@
         stompClient.subscribe('/topic/walker-state', msg => {
           const state = JSON.parse(msg.body);
           applyWalkToggleState(state.enabled);
+        });
+        stompClient.subscribe('/topic/bank', msg => {
+          const state = JSON.parse(msg.body);
+          renderBankState(state.items);
         });
       });
     }
@@ -728,6 +941,7 @@
         charCells       = {};
         charDataMap     = {};
         charAnimations  = {};
+        charCards       = {};
         characters.forEach(char => { charDataMap[char.name] = char; });
 
         buildSharedMap(characters, tileMap);
@@ -735,19 +949,26 @@
 
         connectWebSocket();
         initWalkToggle();
+        loadInitialBankState();
       } catch (e) {
         document.getElementById('characters-error').style.display = 'block';
         document.getElementById('characters-error').textContent = 'Could not load data: ' + e.message;
       }
     }
 
-    document.addEventListener('click', () => {
+    function closeAllPopovers() {
       const tp = document.getElementById('tile-popover');
       tp.style.display = 'none';
       tp._activeTile = null;
       const cp = document.getElementById('char-popover');
       cp.style.display = 'none';
       cp._activeCanvas = null;
+    }
+
+    document.addEventListener('click', closeAllPopovers);
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeAllPopovers();
     });
 
     init();

@@ -2,8 +2,10 @@ package com.paul.artifacts.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.paul.artifacts.client.ArtifactsApiClient;
+import com.paul.artifacts.model.common.SimpleItem;
 import com.paul.artifacts.model.request.*;
 import com.paul.artifacts.model.ws.CharacterPositionMessage;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -84,13 +86,13 @@ public class CharacterActionController {
   }
 
   @PostMapping("/bank/deposit/item")
-  public JsonNode depositBankItem(@PathVariable String name, @RequestBody ItemsRequest request) {
-    return client.actionDepositBankItem(name, request);
+  public JsonNode depositBankItem(@PathVariable String name, @RequestBody List<SimpleItem> items) {
+    return client.actionDepositBankItem(name, items);
   }
 
   @PostMapping("/bank/withdraw/item")
-  public JsonNode withdrawBankItem(@PathVariable String name, @RequestBody ItemsRequest request) {
-    return client.actionWithdrawBankItem(name, request);
+  public JsonNode withdrawBankItem(@PathVariable String name, @RequestBody List<SimpleItem> items) {
+    return client.actionWithdrawBankItem(name, items);
   }
 
   @PostMapping("/bank/withdraw/gold")

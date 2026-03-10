@@ -30,7 +30,7 @@ public class RandomWalkScheduler {
   private final OverworldMapCache mapCache;
   private final SimpMessagingTemplate messagingTemplate;
 
-  private volatile boolean enabled = true;
+  private volatile boolean enabled = false;
 
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;

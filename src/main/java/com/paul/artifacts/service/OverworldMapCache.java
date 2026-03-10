@@ -2,11 +2,13 @@ package com.paul.artifacts.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.paul.artifacts.client.ArtifactsApiClient;
+import com.paul.artifacts.model.map.MapTile;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,42 +19,86 @@ public class OverworldMapCache {
 
   private final ArtifactsApiClient client;
 
-  // "x,y" → map_id
-  private volatile Map<String, Integer> tileMapIds = Map.of();
+  // "x,y" → MapTile
+  private volatile Map<String, MapTile> tiles = Map.of();
 
   @PostConstruct
   public void load() {
     try {
       log.info("Loading overworld map cache...");
-      Map<String, Integer> tiles = new HashMap<>();
+      Map<String, MapTile> loaded = new HashMap<>();
       JsonNode first = client.getLayerMaps("overworld", 1, 500);
       int pages = first.path("pages").asInt(1);
-      addTiles(tiles, first);
+      addTiles(loaded, first);
       for (int p = 2; p <= pages; p++) {
-        addTiles(tiles, client.getLayerMaps("overworld", p, 500));
+        addTiles(loaded, client.getLayerMaps("overworld", p, 500));
       }
-      tileMapIds = Map.copyOf(tiles);
-      log.info("Overworld map cache loaded: {} walkable tiles", tileMapIds.size());
+      tiles = Map.copyOf(loaded);
+      long resources = tiles.values().stream().filter(t -> "resource".equals(t.getContentType())).count();
+      long banks     = tiles.values().stream().filter(t -> "bank".equals(t.getContentType())).count();
+      log.info("Overworld map cache loaded: {} tiles ({} resource, {} bank)", tiles.size(), resources, banks);
     } catch (Exception e) {
       log.error("Failed to load overworld map cache", e);
     }
   }
 
-  private void addTiles(Map<String, Integer> tiles, JsonNode response) {
+  private void addTiles(Map<String, MapTile> loaded, JsonNode response) {
     JsonNode data = response.path("data");
-    if (data.isArray()) {
-      data.forEach(tile -> {
-        String key = tile.path("x").asInt() + "," + tile.path("y").asInt();
-        tiles.put(key, tile.path("map_id").asInt());
-      });
-    }
+    if (!data.isArray()) return;
+    data.forEach(tile -> {
+      int x = tile.path("x").asInt();
+      int y = tile.path("y").asInt();
+
+      // Top-level content covers banks, npcs, monsters, etc.
+      JsonNode content = tile.path("content");
+      String contentType = content.isMissingNode() || content.isNull() ? null : content.path("type").asText(null);
+      String contentCode = content.isMissingNode() || content.isNull() ? null : content.path("code").asText(null);
+
+      // interactions is an ObjectNode with a nested "content" object — check if type is "resource"
+      JsonNode interactionContent = tile.path("interactions").path("content");
+      if ("resource".equals(interactionContent.path("type").asText(null))
+        || "bank".equals(interactionContent.path("type").asText(null))) {
+        contentType = interactionContent.path("type").asText(null);
+        contentCode = interactionContent.path("code").asText(null);
+      }
+
+      loaded.put(x + "," + y, MapTile.builder()
+          .x(x)
+          .y(y)
+          .mapId(tile.path("map_id").asInt())
+          .contentType(contentType)
+          .contentCode(contentCode)
+          .build());
+    });
   }
 
   public boolean isWalkable(int x, int y) {
-    return tileMapIds.containsKey(x + "," + y);
+    return tiles.containsKey(x + "," + y);
   }
 
   public Integer getMapId(int x, int y) {
-    return tileMapIds.get(x + "," + y);
+    MapTile tile = tiles.get(x + "," + y);
+    return tile == null ? null : tile.getMapId();
+  }
+
+  public MapTile getTile(int x, int y) {
+    return tiles.get(x + "," + y);
+  }
+
+  public Collection<MapTile> getResourceTiles() {
+    return tiles.values().stream()
+        .filter(t -> "resource".equals(t.getContentType()))
+        .toList();
+  }
+
+  public MapTile getClosestBankTile(int x, int y) {
+    return tiles.values().stream()
+        .filter(t -> "bank".equals(t.getContentType()))
+        .min((a, b) -> {
+          int da = Math.abs(a.getX() - x) + Math.abs(a.getY() - y);
+          int db = Math.abs(b.getX() - x) + Math.abs(b.getY() - y);
+          return Integer.compare(da, db);
+        })
+        .orElse(null);
   }
 }
