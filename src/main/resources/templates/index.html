@@ -319,6 +319,21 @@
       font-weight: bold;
     }
 
+    .csi-role {
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .csi-role.role-gatherer { color: #40c060; border: 1px solid #40c06066; }
+    .csi-role.role-hunter   { color: #c05050; border: 1px solid #c0505066; }
+    .csi-role.role-crafter  { color: #5090d0; border: 1px solid #5090d066; }
+    .csi-role.role-unknown  { color: #806030; border: 1px solid #80603066; }
+
     .csi-row {
       display: flex;
       justify-content: space-between;
@@ -591,8 +606,12 @@
             `<div class="cp-inv-row"><span>${s.code}</span><span>x${s.quantity}</span></div>`
           ).join('')}</div>`;
 
+      const roleKey = (char.role ?? '').toLowerCase() || 'unknown';
+      const roleEmoji = { gatherer: '⛏️', hunter: '⚔️', crafter: '🔨' }[roleKey] ?? '?';
+
       return `
         <div class="cp-name">${char.name}</div>
+        <span class="csi-role role-${roleKey}" style="margin-bottom:8px;">${roleEmoji} ${char.role ?? '—'}</span>
         ${row('⭐', 'Level',          char.level)}
         ${row('❤️', 'HP',             `${char.hp} / ${char.max_hp}`)}
         ${row('✨', 'XP',             `${char.xp} / ${char.max_xp}`)}
@@ -649,10 +668,16 @@
         ? `<div class="csi-empty">Empty</div>`
         : items.map(s => `<div class="csi-inv-row"><span>${s.code}</span><span>x${s.quantity}</span></div>`).join('');
 
+      const roleKey = (char.role ?? '').toLowerCase() || 'unknown';
+      const roleEmoji = { gatherer: '⛏️', hunter: '⚔️', crafter: '🔨' }[roleKey] ?? '?';
+
       return `
         <div class="csi-header">
           <img src="/${char.skin}.png" alt="${char.name}"/>
-          <div class="csi-name">${char.name}</div>
+          <div>
+            <div class="csi-name">${char.name}</div>
+            <span class="csi-role role-${roleKey}">${roleEmoji} ${char.role ?? '—'}</span>
+          </div>
         </div>
         ${row('⭐', 'Level',    char.level)}
         ${row('❤️', 'HP',       `${char.hp} / ${char.max_hp}`)}
@@ -822,6 +847,7 @@
         charData.y = update.y;
         charData.skin = update.skin;
         if (update.inventory != null) charData.inventory = update.inventory;
+        if (update.role != null) charData.role = update.role;
         if (charCards[update.name]) charCards[update.name].innerHTML = buildCharCardHTML(charData);
       }
 

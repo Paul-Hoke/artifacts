@@ -30,26 +30,28 @@ public class CharacterLoopScheduler {
   public void tick() {
     if (!enabled) return;
 
-    // Skip API call entirely if all characters are still on cooldown
-    if (!loopService.isAnyCharacterReady()) return;
-
-    JsonNode charsNode;
-    try {
-      charsNode = client.getMyCharacters();
-    } catch (Exception e) {
-      log.warn("Could not fetch characters: {}", e.getMessage());
+    // Bootstrap: call getMyCharacters() exactly once to register characters and assign roles.
+    if (!loopService.hasCharacters()) {
+      log.info("Bootstrapping characters...");
+      JsonNode charsNode;
+      try {
+        charsNode = client.getMyCharacters();
+      } catch (Exception e) {
+        log.warn("Could not fetch characters for bootstrap: {}", e.getMessage());
+        return;
+      }
+      JsonNode characters = charsNode.path("data");
+      if (!characters.isArray()) return;
+      int index = 0;
+      for (JsonNode character : characters) {
+        loopService.bootstrapCharacter(character, index++);
+      }
       return;
     }
 
-    JsonNode characters = charsNode.path("data");
-    if (!characters.isArray()) return;
+    // After bootstrap, skip if no character is ready yet
+    if (!loopService.isAnyCharacterReady()) return;
 
-    for (JsonNode character : characters) {
-      try {
-        loopService.tick(character);
-      } catch (Exception e) {
-        log.error("Loop error for {}: {}", character.path("name").asText(), e.getMessage(), e);
-      }
-    }
+    loopService.tickAll();
   }
 }
