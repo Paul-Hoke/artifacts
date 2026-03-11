@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,10 +55,11 @@ public class OverworldMapCache {
       String contentType = content.isMissingNode() || content.isNull() ? null : content.path("type").asText(null);
       String contentCode = content.isMissingNode() || content.isNull() ? null : content.path("code").asText(null);
 
-      // interactions is an ObjectNode with a nested "content" object — check if type is "resource"
+      // interactions is an ObjectNode with a nested "content" object
       JsonNode interactionContent = tile.path("interactions").path("content");
-      if ("resource".equals(interactionContent.path("type").asText(null))
-        || "bank".equals(interactionContent.path("type").asText(null))) {
+      String interactionType = interactionContent.path("type").asText(null);
+      if ("resource".equals(interactionType) || "bank".equals(interactionType)
+          || "workshop".equals(interactionType)) {
         contentType = interactionContent.path("type").asText(null);
         contentCode = interactionContent.path("code").asText(null);
       }
@@ -89,6 +91,14 @@ public class OverworldMapCache {
     return tiles.values().stream()
         .filter(t -> "resource".equals(t.getContentType()))
         .toList();
+  }
+
+  /** Returns the closest tile whose content code matches {@code contentCode} (e.g. a workshop). */
+  public MapTile getClosestWorkshopTile(String contentCode, int x, int y) {
+    return tiles.values().stream()
+        .filter(t -> contentCode.equals(t.getContentCode()))
+        .min(Comparator.comparingInt(t -> Math.abs(t.getX() - x) + Math.abs(t.getY() - y)))
+        .orElse(null);
   }
 
   public MapTile getClosestBankTile(int x, int y) {

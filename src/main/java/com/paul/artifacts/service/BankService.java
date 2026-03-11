@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -29,6 +31,12 @@ public class BankService {
     } catch (Exception e) {
       log.warn("Failed to broadcast bank state: {}", e.getMessage());
     }
+  }
+
+  /** Returns a map of item code → quantity for everything currently in the bank. */
+  public Map<String, Integer> getBankInventoryMap() {
+    return fetchAllBankItems().stream()
+        .collect(Collectors.toMap(SimpleItem::getCode, SimpleItem::getQuantity));
   }
 
   private List<SimpleItem> fetchAllBankItems() {

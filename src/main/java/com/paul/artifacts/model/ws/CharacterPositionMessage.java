@@ -1,5 +1,6 @@
 package com.paul.artifacts.model.ws;
 
+import com.paul.artifacts.model.CharacterRole;
 import com.paul.artifacts.model.common.SimpleItem;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +16,6 @@ public class CharacterPositionMessage {
   private int x;
   private int y;
   private double cooldownSeconds;
+  private CharacterRole role;
   private List<SimpleItem> inventory;
 }
